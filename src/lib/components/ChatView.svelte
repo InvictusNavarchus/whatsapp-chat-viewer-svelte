@@ -180,7 +180,7 @@
 					class="search-input"
 				/>
 				{#if $appState.searchQuery}
-					<button class="clear-search" on:click={clearSearch}>
+					<button class="clear-search" on:click={clearSearch} aria-label="Clear search">
 						<svg width="16" height="16" viewBox="0 0 24 24" fill="none">
 							<path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
 						</svg>
@@ -236,7 +236,7 @@
 
 			<!-- Scroll to bottom button -->
 			{#if showScrollButton}
-				<button class="scroll-to-bottom" on:click={scrollToBottom}>
+				<button class="scroll-to-bottom" on:click={scrollToBottom} aria-label="Scroll to bottom">
 					<svg width="20" height="20" viewBox="0 0 24 24" fill="none">
 						<path d="M7 13L12 18L17 13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
 					</svg>

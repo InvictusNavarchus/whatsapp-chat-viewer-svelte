@@ -19,7 +19,7 @@
 <header class="header">
 	<div class="header-left">
 		{#if $appState.isMobile && $appState.currentChatId}
-			<button class="back-button" on:click={goBack}>
+			<button class="back-button" on:click={goBack} aria-label="Go back to chat list">
 				<svg width="24" height="24" viewBox="0 0 24 24" fill="none">
 					<path d="M19 12H5M12 5L5 12L12 19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
 				</svg>
