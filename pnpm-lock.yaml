@@ -11,6 +11,9 @@ importers:
       idb:
         specifier: ^8.0.0
         version: 8.0.3
+      loglevel:
+        specifier: ^1.9.2
+        version: 1.9.2
     devDependencies:
       '@sveltejs/adapter-auto':
         specifier: ^3.0.0
@@ -426,6 +429,10 @@ packages:
 
   locate-character@3.0.0:
     resolution: {integrity: sha512-SW13ws7BjaeJ6p7Q6CO2nchbYEc3X3J6WrmTTDto7yMPqVSZTUyY5Tjbid+Ab8gLnATtygYtiDIJGQRRn2ZOiA==}
+
+  loglevel@1.9.2:
+    resolution: {integrity: sha512-HgMmCqIJSAKqo68l0rS2AanEWfkxaZ5wNiEFb5ggm08lDs9Xl2KxBlX3PTcaD2chBM1gXAYf491/M2Rv8Jwayg==}
+    engines: {node: '>= 0.6.0'}
 
   magic-string@0.30.17:
     resolution: {integrity: sha512-sNPKHvyjVf7gyjwS4xGTaW/mCnF8wnjtifKBEhxfZ7E/S8tQ0rssrwGNn6q8JH/ohItJfSQp9mBtQYuTlH5QnA==}
@@ -843,6 +850,8 @@ snapshots:
   kleur@4.1.5: {}
 
   locate-character@3.0.0: {}
+
+  loglevel@1.9.2: {}
 
   magic-string@0.30.17:
     dependencies:

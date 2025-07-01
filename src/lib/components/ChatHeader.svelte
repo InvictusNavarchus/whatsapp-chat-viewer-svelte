@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { storeService } from '$lib/stores.js';
 	import type { Chat } from '$lib/stores.js';
+	import log from '$lib/logger';
 
 	export let chat: Chat;
 
@@ -28,7 +29,7 @@
 			loadingStats = true;
 			stats = await storeService.getChatStats(chat.id);
 		} catch (error) {
-			console.error('Failed to load stats:', error);
+			log.error('Failed to load stats:', error);
 		} finally {
 			loadingStats = false;
 		}
@@ -52,7 +53,7 @@
 			
 			URL.revokeObjectURL(url);
 		} catch (error) {
-			console.error('Failed to export chat:', error);
+			log.error('Failed to export chat:', error);
 			alert('Failed to export chat. Please try again.');
 		}
 	}

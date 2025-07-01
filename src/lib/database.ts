@@ -1,4 +1,5 @@
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
+import log from './logger';
 
 /**
  * Database schema interface for WhatsApp Chat Viewer
@@ -66,6 +67,7 @@ class DatabaseService {
 	 * Initialize the database connection with optimized indexes
 	 */
 	async init(): Promise<void> {
+		log.info('Initializing database connection');
 		this.db = await openDB<ChatViewerDB>(this.DB_NAME, this.DB_VERSION, {
 			upgrade(db) {
 				// Chats store
@@ -87,6 +89,7 @@ class DatabaseService {
 				bookmarkStore.createIndex('by-createdAt', 'createdAt');
 			}
 		});
+		log.info('Database connection initialized');
 	}
 
 	/**
@@ -103,6 +106,7 @@ class DatabaseService {
 		}>,
 		rawContent: string
 	): Promise<void> {
+		log.info('Storing new chat');
 		if (!this.db) await this.init();
 
 		const tx = this.db!.transaction(['chats', 'messages'], 'readwrite');
@@ -135,12 +139,14 @@ class DatabaseService {
 		}
 
 		await tx.done;
+		log.info('Chat stored successfully');
 	}
 
 	/**
 	 * Get all chats sorted by last message date
 	 */
 	async getAllChats(): Promise<ChatViewerDB['chats']['value'][]> {
+		log.info('Getting all chats');
 		if (!this.db) await this.init();
 		
 		const chats = await this.db!.getAllFromIndex('chats', 'by-lastMessage');
@@ -151,6 +157,7 @@ class DatabaseService {
 	 * Get chat by ID
 	 */
 	async getChat(chatId: string): Promise<ChatViewerDB['chats']['value'] | undefined> {
+		log.info('Getting chat by ID');
 		if (!this.db) await this.init();
 		return await this.db!.get('chats', chatId);
 	}
@@ -163,6 +170,7 @@ class DatabaseService {
 		limit: number = 50, 
 		offset: number = 0
 	): Promise<ChatViewerDB['messages']['value'][]> {
+		log.info('Getting messages for a chat');
 		if (!this.db) await this.init();
 		
 		let cursor = await this.db!.transaction('messages').store
@@ -182,6 +190,7 @@ class DatabaseService {
 	 * Get all messages for a chat (for searching/filtering)
 	 */
 	async getAllMessagesForChat(chatId: string): Promise<ChatViewerDB['messages']['value'][]> {
+		log.info('Getting all messages for a chat');
 		if (!this.db) await this.init();
 		return await this.db!.getAllFromIndex('messages', 'by-chat', chatId);
 	}
@@ -190,6 +199,7 @@ class DatabaseService {
 	 * Add a bookmark to a message
 	 */
 	async addBookmark(messageId: string, chatId: string, note?: string): Promise<string> {
+		log.info('Adding a bookmark');
 		if (!this.db) await this.init();
 		
 		const bookmarkId = `bookmark-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -209,6 +219,7 @@ class DatabaseService {
 	 * Remove a bookmark
 	 */
 	async removeBookmark(bookmarkId: string): Promise<void> {
+		log.info('Removing a bookmark');
 		if (!this.db) await this.init();
 		await this.db!.delete('bookmarks', bookmarkId);
 	}
@@ -217,6 +228,7 @@ class DatabaseService {
 	 * Get all bookmarks for a chat
 	 */
 	async getBookmarksForChat(chatId: string): Promise<ChatViewerDB['bookmarks']['value'][]> {
+		log.info('Getting all bookmarks for a chat');
 		if (!this.db) await this.init();
 		return await this.db!.getAllFromIndex('bookmarks', 'by-chat', chatId);
 	}
@@ -225,6 +237,7 @@ class DatabaseService {
 	 * Get all bookmarks across all chats
 	 */
 	async getAllBookmarks(): Promise<ChatViewerDB['bookmarks']['value'][]> {
+		log.info('Getting all bookmarks');
 		if (!this.db) await this.init();
 		const bookmarks = await this.db!.getAllFromIndex('bookmarks', 'by-createdAt');
 		return bookmarks.reverse(); // Most recent first
@@ -234,6 +247,7 @@ class DatabaseService {
 	 * Check if a message is bookmarked
 	 */
 	async isMessageBookmarked(messageId: string): Promise<boolean> {
+		log.info('Checking if a message is bookmarked');
 		if (!this.db) await this.init();
 		
 		const tx = this.db!.transaction('bookmarks', 'readonly');
@@ -253,6 +267,7 @@ class DatabaseService {
 	 * Get bookmark by message ID
 	 */
 	async getBookmarkByMessageId(messageId: string): Promise<ChatViewerDB['bookmarks']['value'] | undefined> {
+		log.info('Getting bookmark by message ID');
 		if (!this.db) await this.init();
 		
 		const tx = this.db!.transaction('bookmarks', 'readonly');
@@ -272,6 +287,7 @@ class DatabaseService {
 	 * Search messages across all chats
 	 */
 	async searchMessages(query: string, chatId?: string): Promise<ChatViewerDB['messages']['value'][]> {
+		log.info('Searching messages');
 		if (!this.db) await this.init();
 		
 		const lowerQuery = query.toLowerCase();
@@ -298,6 +314,7 @@ class DatabaseService {
 	 * Delete a chat and all its messages
 	 */
 	async deleteChat(chatId: string): Promise<void> {
+		log.info('Deleting a chat');
 		if (!this.db) await this.init();
 		
 		const tx = this.db!.transaction(['chats', 'messages', 'bookmarks'], 'readwrite');

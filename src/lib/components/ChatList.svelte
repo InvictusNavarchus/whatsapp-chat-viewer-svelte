@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { chats, appState, storeService } from '$lib/stores.js';
 	import type { Chat } from '$lib/stores.js';
+	import log from '$lib/logger';
 
 	let searchQuery = '';
 	let filteredChats: Chat[] = [];

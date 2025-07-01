@@ -4,6 +4,7 @@
 	import type { Message } from '$lib/stores.js';
 	import MessageBubble from './MessageBubble.svelte';
 	import ChatHeader from './ChatHeader.svelte';
+	import log from '$lib/logger';
 
 	let messagesContainer: HTMLElement;
 	let searchInput: HTMLInputElement;

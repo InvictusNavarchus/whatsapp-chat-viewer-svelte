@@ -6,6 +6,7 @@
 	import UploadArea from '$lib/components/UploadArea.svelte';
 	import BookmarksPanel from '$lib/components/BookmarksPanel.svelte';
 	import Header from '$lib/components/Header.svelte';
+	import log from '$lib/logger';
 
 	let isInitialized = false;
 
@@ -14,7 +15,7 @@
 			await storeService.init();
 			isInitialized = true;
 		} catch (error) {
-			console.error('Failed to initialize app:', error);
+			log.error('Failed to initialize app:', error);
 		}
 	});
 </script>

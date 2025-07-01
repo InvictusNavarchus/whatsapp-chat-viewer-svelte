@@ -1,3 +1,5 @@
+import log from './logger';
+
 /**
  * Parsed message interface
  */
@@ -34,6 +36,7 @@ export class WhatsAppParser {
 		messages: ParsedMessage[];
 		metadata: ChatMetadata;
 	} {
+		log.info('Parsing WhatsApp chat export text into structured data');
 		const lines = chatContent.split('\n').filter(line => line.trim());
 		const messages: ParsedMessage[] = [];
 		const participantSet = new Set<string>();
@@ -108,6 +111,7 @@ export class WhatsAppParser {
 	 * Parse date and time string into Date object
 	 */
 	private static parseDateTime(dateStr: string, timeStr: string): Date {
+		log.info('Parsing date and time string into Date object');
 		// Handle different date formats (M/D/YY, MM/DD/YYYY, etc.)
 		const [month, day, year] = dateStr.split('/').map(num => parseInt(num, 10));
 		const [hours, minutes] = timeStr.split(':').map(num => parseInt(num, 10));
@@ -122,6 +126,7 @@ export class WhatsAppParser {
 	 * Generate a meaningful chat name based on participants and content
 	 */
 	private static generateChatName(participants: string[], messages: ParsedMessage[]): string {
+		log.info('Generating a meaningful chat name based on participants and content');
 		if (participants.length === 0) {
 			return 'Unknown Chat';
 		}
@@ -163,6 +168,7 @@ export class WhatsAppParser {
 		isValid: boolean;
 		errors: string[];
 	} {
+		log.info('Validating if the content looks like a WhatsApp chat export');
 		const errors: string[] = [];
 		
 		if (!content || content.trim().length === 0) {
@@ -217,6 +223,7 @@ export class WhatsAppParser {
 		dateRange: string;
 		firstFewMessages: ParsedMessage[];
 	} {
+		log.info('Extracting chat preview information without full parsing');
 		const lines = content.split('\n').filter(line => line.trim()).slice(0, 20);
 		const participants = new Set<string>();
 		const messages: ParsedMessage[] = [];

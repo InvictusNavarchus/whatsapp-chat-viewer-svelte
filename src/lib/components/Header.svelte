@@ -1,10 +1,12 @@
 <script lang="ts">
 	import { appState, storeService } from '$lib/stores.js';
+	import log from '$lib/logger';
 
 	/**
 	 * Toggle bookmarks panel visibility
 	 */
 	function toggleBookmarks() {
+		log.info('Toggling bookmarks');
 		storeService.toggleBookmarksView();
 	}
 
@@ -12,6 +14,7 @@
 	 * Navigate back to chat list on mobile
 	 */
 	function goBack() {
+		log.info('Going back to chat list');
 		storeService.clearCurrentChat();
 	}
 </script>

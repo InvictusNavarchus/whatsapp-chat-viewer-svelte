@@ -2,8 +2,10 @@
 	import { onMount } from 'svelte';
 	import { storeService } from '$lib/stores.js';
 	import '../app.css';
+	import log from '$lib/logger';
 
 	onMount(async () => {
+		log.info('Initializing store service');
 		await storeService.init();
 	});
 </script>

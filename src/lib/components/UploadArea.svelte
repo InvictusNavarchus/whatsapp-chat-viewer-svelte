@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { storeService } from '$lib/stores.js';
 	import { WhatsAppParser } from '$lib/parser.js';
+	import log from '$lib/logger';
 	
 	let isDragOver = false;
 	let isUploading = false;
@@ -93,7 +94,7 @@
 			}
 
 		} catch (error) {
-			console.error('Upload error:', error);
+			log.error('Upload error:', error);
 			uploadError = error instanceof Error ? error.message : 'Failed to upload file';
 		} finally {
 			isUploading = false;

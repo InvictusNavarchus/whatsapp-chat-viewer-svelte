@@ -1,6 +1,7 @@
 import { writable, derived, get } from 'svelte/store';
 import { dbService } from './database.js';
 import type { ParsedMessage } from './parser.js';
+import log from './logger';
 
 /**
  * Chat interface for the store

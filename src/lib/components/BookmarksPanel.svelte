@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { bookmarks, currentChatBookmarks, chats, appState, storeService } from '$lib/stores.js';
 	import type { Bookmark, Chat } from '$lib/stores.js';
+	import log from '$lib/logger';
 
 	let viewMode: 'all' | 'current' = 'all';
 
@@ -26,7 +27,7 @@
 				storeService.toggleBookmarksView();
 			}
 		} catch (error) {
-			console.error('Failed to navigate to bookmark:', error);
+			log.error('Failed to navigate to bookmark:', error);
 		}
 	}
 
@@ -40,7 +41,7 @@
 			try {
 				await storeService.toggleBookmark(bookmark.messageId, bookmark.chatId);
 			} catch (error) {
-				console.error('Failed to remove bookmark:', error);
+				log.error('Failed to remove bookmark:', error);
 				alert('Failed to remove bookmark. Please try again.');
 			}
 		}
@@ -85,7 +86,7 @@
 					: message.content;
 			}
 		} catch (error) {
-			console.error('Failed to get message preview:', error);
+			log.error('Failed to get message preview:', error);
 		}
 		return 'Message not found';
 	}
