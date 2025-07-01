@@ -1,0 +1,258 @@
+/* Global styles for WhatsApp Chat Viewer */
+
+* {
+	box-sizing: border-box;
+}
+
+:root {
+	/* WhatsApp-inspired color palette */
+	--wa-green-primary: #25d366;
+	--wa-green-dark: #128c7e;
+	--wa-green-light: #dcf8c6;
+	--wa-blue-light: #e3f2fd;
+	--wa-gray-light: #f0f2f5;
+	--wa-gray-medium: #e5e5e5;
+	--wa-gray-dark: #667781;
+	--wa-text-primary: #111b21;
+	--wa-text-secondary: #667781;
+	--wa-white: #ffffff;
+	--wa-shadow: rgba(0, 0, 0, 0.1);
+	--wa-border: #e9edef;
+	
+	/* Spacing */
+	--spacing-xs: 0.25rem;
+	--spacing-sm: 0.5rem;
+	--spacing-md: 1rem;
+	--spacing-lg: 1.5rem;
+	--spacing-xl: 2rem;
+	
+	/* Border radius */
+	--radius-sm: 0.375rem;
+	--radius-md: 0.5rem;
+	--radius-lg: 0.75rem;
+	--radius-xl: 1rem;
+	
+	/* Transitions */
+	--transition-fast: 150ms ease;
+	--transition-normal: 250ms ease;
+	--transition-slow: 350ms ease;
+	
+	/* Shadows */
+	--shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+	--shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
+	--shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
+	
+	/* Z-index layers */
+	--z-dropdown: 1000;
+	--z-sticky: 1020;
+	--z-fixed: 1030;
+	--z-modal-backdrop: 1040;
+	--z-modal: 1050;
+	--z-popover: 1060;
+	--z-tooltip: 1070;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+	width: 6px;
+}
+
+::-webkit-scrollbar-track {
+	background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+	background: var(--wa-gray-medium);
+	border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+	background: var(--wa-gray-dark);
+}
+
+/* Focus styles */
+*:focus {
+	outline: 2px solid var(--wa-green-primary);
+	outline-offset: 2px;
+}
+
+/* Button reset and base styles */
+button {
+	background: none;
+	border: none;
+	cursor: pointer;
+	font-family: inherit;
+	font-size: inherit;
+	padding: 0;
+	margin: 0;
+	transition: all var(--transition-fast);
+}
+
+/* Input reset and base styles */
+input, textarea {
+	font-family: inherit;
+	font-size: inherit;
+	border: none;
+	outline: none;
+	background: transparent;
+}
+
+/* Loading animation */
+@keyframes spin {
+	to {
+		transform: rotate(360deg);
+	}
+}
+
+.loading-spinner {
+	display: inline-block;
+	width: 20px;
+	height: 20px;
+	border: 2px solid var(--wa-gray-medium);
+	border-radius: 50%;
+	border-top-color: var(--wa-green-primary);
+	animation: spin 1s linear infinite;
+}
+
+/* Utility classes */
+.sr-only {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	padding: 0;
+	margin: -1px;
+	overflow: hidden;
+	clip: rect(0, 0, 0, 0);
+	white-space: nowrap;
+	border: 0;
+}
+
+.truncate {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.text-xs { font-size: 0.75rem; }
+.text-sm { font-size: 0.875rem; }
+.text-base { font-size: 1rem; }
+.text-lg { font-size: 1.125rem; }
+.text-xl { font-size: 1.25rem; }
+
+.font-medium { font-weight: 500; }
+.font-semibold { font-weight: 600; }
+.font-bold { font-weight: 700; }
+
+.text-primary { color: var(--wa-text-primary); }
+.text-secondary { color: var(--wa-text-secondary); }
+.text-green { color: var(--wa-green-primary); }
+
+/* Responsive utilities */
+@media (max-width: 767px) {
+	.hidden-mobile {
+		display: none !important;
+	}
+}
+
+@media (min-width: 768px) {
+	.hidden-desktop {
+		display: none !important;
+	}
+}
+
+/* Animation utilities */
+.fade-in {
+	animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+	from {
+		opacity: 0;
+		transform: translateY(10px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+.slide-in-right {
+	animation: slideInRight 0.3s ease-out;
+}
+
+@keyframes slideInRight {
+	from {
+		transform: translateX(100%);
+	}
+	to {
+		transform: translateX(0);
+	}
+}
+
+.slide-in-left {
+	animation: slideInLeft 0.3s ease-out;
+}
+
+@keyframes slideInLeft {
+	from {
+		transform: translateX(-100%);
+	}
+	to {
+		transform: translateX(0);
+	}
+}
+
+/* Message bubble styles */
+.message-bubble {
+	max-width: 70%;
+	padding: var(--spacing-sm) var(--spacing-md);
+	border-radius: var(--radius-lg);
+	margin-bottom: var(--spacing-xs);
+	word-wrap: break-word;
+	position: relative;
+}
+
+.message-bubble.sent {
+	background: var(--wa-green-light);
+	align-self: flex-end;
+	margin-left: auto;
+}
+
+.message-bubble.received {
+	background: var(--wa-white);
+	align-self: flex-start;
+	margin-right: auto;
+}
+
+.message-bubble.system {
+	background: var(--wa-gray-light);
+	align-self: center;
+	max-width: 90%;
+	text-align: center;
+	font-size: 0.875rem;
+	color: var(--wa-text-secondary);
+}
+
+/* Message time */
+.message-time {
+	font-size: 0.75rem;
+	color: var(--wa-text-secondary);
+	margin-top: var(--spacing-xs);
+	text-align: right;
+}
+
+/* Hover states */
+.hover-bg:hover {
+	background-color: var(--wa-gray-light);
+}
+
+.hover-green:hover {
+	background-color: var(--wa-green-primary);
+	color: white;
+}
+
+/* Selection styles */
+::selection {
+	background-color: var(--wa-green-primary);
+	color: white;
+}
