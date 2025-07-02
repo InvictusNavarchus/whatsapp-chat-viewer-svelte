@@ -45,20 +45,13 @@
 	 */
 	function handleFileInput(event: Event) {
 		console.log('FILE INPUT: Event triggered');
-		
 		const target = event.target as HTMLInputElement;
 		console.log('FILE INPUT: Target acquired');
-		
-		console.log('FILE INPUT: About to access target.files');
 		const files = target.files;
-		console.log('FILE INPUT: Files acquired, about to check length');
 		console.log('FILE INPUT: Files found:', files?.length);
-		
 		if (files && files.length > 0) {
 			console.log('FILE INPUT: About to call handleFileUpload');
 			handleFileUpload(files[0]);
-		} else {
-			console.log('FILE INPUT: No files found or files is null');
 		}
 	}
 
@@ -106,16 +99,15 @@
 			console.log('STEP 5: About to store chat with', messages.length, 'messages');
 			console.log('STEP 5: Calling storeService.addChat...');
 			
-			// Store in database
+			// Store in database - this is where the freeze likely happens
 			const chatId = await storeService.addChat(
 				metadata.name,
 				metadata.participants,
 				messages,
 				content
 			);
-			
-			console.log('STEP 5 COMPLETE: Chat stored with ID:', chatId);
 
+			console.log('STEP 5 COMPLETE: Chat stored with ID:', chatId);
 			uploadSuccess = `Successfully imported ${messages.length} messages from "${metadata.name}"`;
 			console.log('STEP 6: Upload completed successfully');
 			

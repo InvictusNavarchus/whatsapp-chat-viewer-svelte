@@ -157,13 +157,7 @@ class StoreService {
 			appState.update(state => ({ ...state, isLoading: true }));
 			
 			console.log('LOAD MESSAGES: About to call dbService.getAllMessagesForChat');
-			// Add timeout to prevent infinite hanging
-			const timeoutPromise = new Promise<never>((_, reject) => {
-				setTimeout(() => reject(new Error('Message loading timed out')), 10000);
-			});
-			
-			const messagePromise = dbService.getAllMessagesForChat(chatId);
-			const messageList = await Promise.race([messagePromise, timeoutPromise]);
+			const messageList = await dbService.getAllMessagesForChat(chatId);
 			console.log('LOAD MESSAGES: Got messages from DB, count:', messageList.length);
 			
 			// Cache the results
@@ -228,21 +222,14 @@ class StoreService {
 			console.log('ADD CHAT: Generated chatId:', chatId);
 			
 			console.log('ADD CHAT: About to call dbService.storeChat');
+			// Store the chat in database
 			await dbService.storeChat(chatId, name, participants, parsedMessages, rawContent);
 			console.log('ADD CHAT: dbService.storeChat completed');
 			
-			// Remove the setTimeout delay that's causing the freeze
-			console.log('ADD CHAT: About to call loadChats immediately');
-			
-			// Refresh chats list
 			console.log('ADD CHAT: About to call loadChats');
+			// Simply refresh chats list without switching - avoid reactive loops
 			await this.loadChats();
 			console.log('ADD CHAT: loadChats completed');
-			
-			// Switch to the new chat
-			console.log('ADD CHAT: About to call switchToChat');
-			await this.switchToChat(chatId);
-			console.log('ADD CHAT: switchToChat completed');
 			
 			console.log('ADD CHAT: Everything completed successfully');
 			return chatId;
