@@ -45,12 +45,21 @@
 	 */
 	function handleFileInput(event: Event) {
 		console.log('FILE INPUT: Event triggered');
+		console.log('FILE INPUT: Event object:', event);
+		
 		const target = event.target as HTMLInputElement;
+		console.log('FILE INPUT: Target acquired:', target);
+		
+		console.log('FILE INPUT: About to access target.files');
 		const files = target.files;
+		console.log('FILE INPUT: Files acquired, about to check length');
 		console.log('FILE INPUT: Files found:', files?.length);
+		
 		if (files && files.length > 0) {
 			console.log('FILE INPUT: About to call handleFileUpload');
 			handleFileUpload(files[0]);
+		} else {
+			console.log('FILE INPUT: No files found or files is null');
 		}
 	}
 
