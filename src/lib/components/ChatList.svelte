@@ -27,30 +27,11 @@
 		console.log('CHATLIST: selectChat called for chat:', chat.id, chat.name);
 		
 		try {
-			console.log('CHATLIST: Test 1 - Basic appState update (known to work)');
-			appState.update(state => ({ ...state, currentChatId: chat.id }));
-			console.log('CHATLIST: Test 1 PASSED');
-			
-			console.log('CHATLIST: Test 2 - Trying storeService.loadMessages directly');
-			await storeService.loadMessages(chat.id);
-			console.log('CHATLIST: Test 2 PASSED - loadMessages works!');
-			
-			console.log('CHATLIST: Test 3 - Trying full storeService.switchToChat');
-			// Reset state first
-			appState.update(state => ({ ...state, currentChatId: null }));
-			
-			// Now try the full switchToChat method
 			await storeService.switchToChat(chat.id);
-			console.log('CHATLIST: Test 3 PASSED - switchToChat works too!');
-			
-			console.log('CHATLIST: ALL TESTS PASSED - The issue was likely with ChatView reactive statements');
-			
+			console.log('CHATLIST: Chat switched successfully');
 		} catch (error) {
-			console.error('CHATLIST: Error in test:', error);
-			console.error('CHATLIST: Error stack:', error instanceof Error ? error.stack : 'No stack available');
-			
-			// Reset state on error
-			appState.update(state => ({ ...state, currentChatId: null }));
+			console.error('CHATLIST: Error switching chat:', error);
+			alert(`Failed to load chat "${chat.name}". Please try again. Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
 		}
 	}
 

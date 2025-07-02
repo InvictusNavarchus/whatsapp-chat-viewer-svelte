@@ -21,29 +21,51 @@
 	const BUFFER_SIZE = 10;
 	const VISIBLE_ITEMS = 20;
 
-	// TEMPORARILY DISABLED REACTIVE STATEMENTS FOR DEBUGGING
-	// $: if ($currentChat && $messages.length > 0) {
-	// 	updateVirtualizedMessages();
-	// }
+	// FIXED: Safe reactive statements with proper null checks
+	$: if ($currentChat && $messages.length > 0 && $appState.isInitialized) {
+		// Only update virtualization when we have both chat and messages
+		try {
+			updateVirtualizedMessages();
+		} catch (error) {
+			console.warn('Error updating virtualized messages:', error);
+		}
+	}
 
-	// $: displayMessages = $appState.searchQuery ? $filteredMessages : virtualizedMessages;
+	// FIXED: Safe display messages with fallback
+	$: {
+		try {
+			displayMessages = $appState.searchQuery ? $filteredMessages : virtualizedMessages;
+		} catch (error) {
+			console.warn('Error updating display messages:', error);
+			displayMessages = []; // Safe fallback
+		}
+	}
 
 	/**
 	 * Update virtualized messages based on scroll position
 	 */
 	function updateVirtualizedMessages() {
-		if (!$messages.length) return;
+		// FIXED: Add comprehensive safety checks
+		if (!$messages || !Array.isArray($messages) || $messages.length === 0) {
+			virtualizedMessages = [];
+			return;
+		}
 
-		const visibleStart = Math.floor(scrollTop / itemHeight);
-		const visibleEnd = Math.min(
-			visibleStart + Math.ceil(containerHeight / itemHeight),
-			$messages.length
-		);
+		try {
+			const visibleStart = Math.floor(scrollTop / itemHeight);
+			const visibleEnd = Math.min(
+				visibleStart + Math.ceil(containerHeight / itemHeight),
+				$messages.length
+			);
 
-		startIndex = Math.max(0, visibleStart - BUFFER_SIZE);
-		endIndex = Math.min($messages.length, visibleEnd + BUFFER_SIZE);
+			startIndex = Math.max(0, visibleStart - BUFFER_SIZE);
+			endIndex = Math.min($messages.length, visibleEnd + BUFFER_SIZE);
 
-		virtualizedMessages = $messages.slice(startIndex, endIndex);
+			virtualizedMessages = $messages.slice(startIndex, endIndex);
+		} catch (error) {
+			console.warn('Error in updateVirtualizedMessages:', error);
+			virtualizedMessages = $messages.slice(0, Math.min(50, $messages.length)); // Safe fallback
+		}
 	}
 
 	/**
@@ -154,13 +176,22 @@
 		}
 	});
 
-	// TEMPORARILY DISABLED: Auto-scroll to bottom when chat changes
-	// $: if ($currentChat && messagesContainer) {
-	// 	tick().then(() => {
-	// 		scrollToBottom();
-	// 		isNearBottom = true;
-	// 	});
-	// }
+	// FIXED: Safe auto-scroll with proper timing and null checks
+	$: if ($currentChat && messagesContainer && $appState.isInitialized && !$appState.isLoading) {
+		// Only auto-scroll when everything is ready and not loading
+		try {
+			tick().then(() => {
+				if (messagesContainer) { // Double-check DOM element still exists
+					scrollToBottom();
+					isNearBottom = true;
+				}
+			}).catch((error) => {
+				console.warn('Error during auto-scroll:', error);
+			});
+		} catch (error) {
+			console.warn('Error setting up auto-scroll:', error);
+		}
+	}
 </script>
 
 {#if $currentChat}
