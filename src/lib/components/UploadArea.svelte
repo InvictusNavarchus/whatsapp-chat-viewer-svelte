@@ -57,27 +57,38 @@
 		isUploading = true;
 
 		try {
+			console.log('STEP 1: Starting file upload process');
+			
 			// Validate file type
 			if (!file.name.endsWith('.txt') && file.type !== 'text/plain') {
 				throw new Error('Please upload a text file (.txt)');
 			}
 
+			console.log('STEP 2: Reading file content');
 			// Read file content
 			const content = await readFileContent(file);
+			console.log('STEP 2 COMPLETE: File content read, length:', content.length);
 			
+			console.log('STEP 3: Validating content format');
 			// Validate content format
 			const validation = WhatsAppParser.validate(content);
 			if (!validation.isValid) {
 				throw new Error(`Invalid WhatsApp chat format:\n${validation.errors.join('\n')}`);
 			}
+			console.log('STEP 3 COMPLETE: Content validation passed');
 
+			console.log('STEP 4: Parsing chat content');
 			// Parse the chat
 			const { messages, metadata } = WhatsAppParser.parse(content);
+			console.log('STEP 4 COMPLETE: Parsed', messages.length, 'messages');
 			
 			if (messages.length === 0) {
 				throw new Error('No messages found in the uploaded file');
 			}
 
+			console.log('STEP 5: About to store chat with', messages.length, 'messages');
+			console.log('STEP 5: Calling storeService.addChat...');
+			
 			// Store in database
 			const chatId = await storeService.addChat(
 				metadata.name,
@@ -85,8 +96,11 @@
 				messages,
 				content
 			);
+			
+			console.log('STEP 5 COMPLETE: Chat stored with ID:', chatId);
 
 			uploadSuccess = `Successfully imported ${messages.length} messages from "${metadata.name}"`;
+			console.log('STEP 6: Upload completed successfully');
 			
 			// Clear file input
 			if (fileInput) {
@@ -94,9 +108,10 @@
 			}
 
 		} catch (error) {
-			log.error('Upload error:', error);
+			console.error('Upload error at step:', error);
 			uploadError = error instanceof Error ? error.message : 'Failed to upload file';
 		} finally {
+			console.log('CLEANUP: Setting isUploading to false');
 			isUploading = false;
 		}
 	}

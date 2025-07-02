@@ -120,35 +120,49 @@ class DatabaseService {
 
 		const tx = this.db!.transaction(['chats', 'messages'], 'readwrite');
 
-		// Store chat metadata
-		const chat = {
-			id,
-			name,
-			participants,
-			createdAt: new Date(),
-			lastMessageAt: messages.length > 0 ? messages[messages.length - 1].timestamp : new Date(),
-			messageCount: messages.length,
-			rawContent
-		};
+		try {
+			// Store chat metadata
+			const chat = {
+				id,
+				name,
+				participants,
+				createdAt: new Date(),
+				lastMessageAt: messages.length > 0 ? messages[messages.length - 1].timestamp : new Date(),
+				messageCount: messages.length,
+				rawContent
+			};
 
-		await tx.objectStore('chats').put(chat);
+			await tx.objectStore('chats').put(chat);
 
-		// Store messages with optimized batch insert
-		const messageStore = tx.objectStore('messages');
-		for (let i = 0; i < messages.length; i++) {
-			const message = messages[i];
-			await messageStore.put({
-				id: `${id}-${i}`,
-				chatId: id,
-				timestamp: message.timestamp,
-				sender: message.sender,
-				content: message.content,
-				messageIndex: i
-			});
+			// Store messages in smaller batches to prevent overwhelming IndexedDB
+			const messageStore = tx.objectStore('messages');
+			const BATCH_SIZE = 100;
+			
+			for (let i = 0; i < messages.length; i += BATCH_SIZE) {
+				const batch = messages.slice(i, i + BATCH_SIZE);
+				const batchPromises = batch.map((message, batchIndex) => {
+					const messageIndex = i + batchIndex;
+					return messageStore.put({
+						id: `${id}-${messageIndex}`,
+						chatId: id,
+						timestamp: message.timestamp,
+						sender: message.sender,
+						content: message.content,
+						messageIndex: messageIndex
+					});
+				});
+				
+				await Promise.all(batchPromises);
+			}
+
+			// Ensure transaction is fully committed
+			await tx.done;
+			log.info('Chat stored successfully');
+		} catch (error) {
+			log.error('Error storing chat:', error);
+			// Transaction will auto-abort on error
+			throw error;
 		}
-
-		await tx.done;
-		log.info('Chat stored successfully');
 	}
 
 	/**
@@ -191,11 +205,18 @@ class DatabaseService {
 		
 		const messages: ChatViewerDB['messages']['value'][] = [];
 		let count = 0;
+		let iterations = 0;
+		const MAX_ITERATIONS = 10000; // Safety limit to prevent infinite loops
 		
-		while (cursor && count < limit) {
+		while (cursor && count < limit && iterations < MAX_ITERATIONS) {
 			messages.push(cursor.value);
 			count++;
+			iterations++;
 			cursor = await cursor.continue();
+		}
+		
+		if (iterations >= MAX_ITERATIONS) {
+			console.error('getMessages: Hit iteration limit, possible infinite loop detected');
 		}
 		
 		return messages;

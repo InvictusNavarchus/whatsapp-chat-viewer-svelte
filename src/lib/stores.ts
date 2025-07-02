@@ -136,28 +136,47 @@ class StoreService {
 	 * Load messages for a specific chat with aggressive caching
 	 */
 	async loadMessages(chatId: string, forceRefresh = false): Promise<void> {
-		if (this.loadingStates.has(chatId)) return;
+		console.log('LOAD MESSAGES: Starting for chatId:', chatId, 'forceRefresh:', forceRefresh);
+		
+		if (this.loadingStates.has(chatId)) {
+			console.warn(`LOAD MESSAGES: Already loading messages for chat ${chatId}, skipping duplicate request`);
+			return;
+		}
 		
 		// Check cache first
 		if (!forceRefresh && this.messageCache.has(chatId)) {
+			console.log('LOAD MESSAGES: Found cached messages, using cache');
 			const cachedMessages = this.messageCache.get(chatId)!;
 			messages.set(cachedMessages);
 			return;
 		}
 
 		try {
+			console.log('LOAD MESSAGES: Adding to loading states');
 			this.loadingStates.add(chatId);
 			appState.update(state => ({ ...state, isLoading: true }));
 			
-			const messageList = await dbService.getAllMessagesForChat(chatId);
+			console.log('LOAD MESSAGES: About to call dbService.getAllMessagesForChat');
+			// Add timeout to prevent infinite hanging
+			const timeoutPromise = new Promise<never>((_, reject) => {
+				setTimeout(() => reject(new Error('Message loading timed out')), 10000);
+			});
+			
+			const messagePromise = dbService.getAllMessagesForChat(chatId);
+			const messageList = await Promise.race([messagePromise, timeoutPromise]);
+			console.log('LOAD MESSAGES: Got messages from DB, count:', messageList.length);
 			
 			// Cache the results
 			this.messageCache.set(chatId, messageList);
 			messages.set(messageList);
+			console.log('LOAD MESSAGES: Set messages in store and cache');
 			
 		} catch (error) {
-			console.error('Failed to load messages:', error);
+			console.error('LOAD MESSAGES: Failed to load messages:', error);
+			// Clear the cache entry on error
+			this.messageCache.delete(chatId);
 		} finally {
+			console.log('LOAD MESSAGES: Cleaning up loading state');
 			this.loadingStates.delete(chatId);
 			appState.update(state => ({ ...state, isLoading: false }));
 		}
@@ -185,8 +204,11 @@ class StoreService {
 	 * Switch to a different chat
 	 */
 	async switchToChat(chatId: string): Promise<void> {
+		console.log('SWITCH TO CHAT: Starting for chatId:', chatId);
 		appState.update(state => ({ ...state, currentChatId: chatId }));
+		console.log('SWITCH TO CHAT: Updated appState, about to load messages');
 		await this.loadMessages(chatId);
+		console.log('SWITCH TO CHAT: Messages loaded successfully');
 	}
 
 	/**
@@ -199,23 +221,37 @@ class StoreService {
 		rawContent: string
 	): Promise<string> {
 		try {
+			console.log('ADD CHAT: Starting addChat process');
 			appState.update(state => ({ ...state, isLoading: true }));
 			
 			const chatId = `chat-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+			console.log('ADD CHAT: Generated chatId:', chatId);
 			
+			console.log('ADD CHAT: About to call dbService.storeChat');
 			await dbService.storeChat(chatId, name, participants, parsedMessages, rawContent);
+			console.log('ADD CHAT: dbService.storeChat completed');
+			
+			// Add a small delay to ensure IndexedDB transaction is fully committed
+			console.log('ADD CHAT: Adding 100ms delay for IndexedDB commit');
+			await new Promise(resolve => setTimeout(resolve, 100));
 			
 			// Refresh chats list
+			console.log('ADD CHAT: About to call loadChats');
 			await this.loadChats();
+			console.log('ADD CHAT: loadChats completed');
 			
 			// Switch to the new chat
+			console.log('ADD CHAT: About to call switchToChat');
 			await this.switchToChat(chatId);
+			console.log('ADD CHAT: switchToChat completed');
 			
+			console.log('ADD CHAT: Everything completed successfully');
 			return chatId;
 		} catch (error) {
-			console.error('Failed to add chat:', error);
+			console.error('ADD CHAT: Failed to add chat:', error);
 			throw error;
 		} finally {
+			console.log('ADD CHAT: Setting isLoading to false');
 			appState.update(state => ({ ...state, isLoading: false }));
 		}
 	}
