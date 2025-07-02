@@ -1,23 +1,11 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
-	import { appState, chats, currentChat, storeService } from '$lib/stores.js';
+	import { appState, chats, currentChat } from '$lib/stores.js';
 	import ChatList from '$lib/components/ChatList.svelte';
 	import ChatView from '$lib/components/ChatView.svelte';
 	import UploadArea from '$lib/components/UploadArea.svelte';
 	import BookmarksPanel from '$lib/components/BookmarksPanel.svelte';
 	import Header from '$lib/components/Header.svelte';
 	import log from '$lib/logger';
-
-	let isInitialized = false;
-
-	onMount(async () => {
-		try {
-			await storeService.init();
-			isInitialized = true;
-		} catch (error) {
-			log.error('Failed to initialize app:', error);
-		}
-	});
 </script>
 
 <svelte:head>
@@ -25,7 +13,7 @@
 	<meta name="description" content="View and manage your WhatsApp chat exports with bookmarks and search" />
 </svelte:head>
 
-{#if !isInitialized}
+{#if !$appState.isInitialized}
 	<div class="loading-screen">
 		<div class="loading-spinner"></div>
 		<p>Loading WhatsApp Chat Viewer...</p>

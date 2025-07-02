@@ -48,6 +48,7 @@ interface AppState {
 	searchQuery: string;
 	showBookmarks: boolean;
 	isMobile: boolean;
+	isInitialized: boolean;
 }
 
 // Core stores
@@ -59,7 +60,8 @@ export const appState = writable<AppState>({
 	isLoading: false,
 	searchQuery: '',
 	showBookmarks: false,
-	isMobile: false
+	isMobile: false,
+	isInitialized: false
 });
 
 // Derived stores for optimized data access
@@ -110,6 +112,8 @@ class StoreService {
 		// Setup mobile detection
 		this.updateMobileState();
 		window.addEventListener('resize', () => this.updateMobileState());
+
+		appState.update(state => ({ ...state, isInitialized: true }));
 	}
 
 	/**

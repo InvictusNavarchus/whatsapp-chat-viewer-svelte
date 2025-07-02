@@ -1,5 +1,11 @@
 <script>
+	import { onMount } from 'svelte';
+	import { storeService } from '$lib/stores.js';
 	import '../app.css';
+
+	onMount(async () => {
+		await storeService.init();
+	});
 </script>
 
 <main>
