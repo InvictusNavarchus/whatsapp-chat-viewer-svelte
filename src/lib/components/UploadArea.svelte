@@ -13,11 +13,14 @@
 	 * Handle file drop event
 	 */
 	function handleDrop(event: DragEvent) {
+		console.log('DROP: Drop event triggered');
 		event.preventDefault();
 		isDragOver = false;
 		
 		const files = event.dataTransfer?.files;
+		console.log('DROP: Files found:', files?.length);
 		if (files && files.length > 0) {
+			console.log('DROP: About to call handleFileUpload');
 			handleFileUpload(files[0]);
 		}
 	}
@@ -41,9 +44,12 @@
 	 * Handle file input change
 	 */
 	function handleFileInput(event: Event) {
+		console.log('FILE INPUT: Event triggered');
 		const target = event.target as HTMLInputElement;
 		const files = target.files;
+		console.log('FILE INPUT: Files found:', files?.length);
 		if (files && files.length > 0) {
+			console.log('FILE INPUT: About to call handleFileUpload');
 			handleFileUpload(files[0]);
 		}
 	}
@@ -52,19 +58,22 @@
 	 * Process uploaded file and parse WhatsApp chat
 	 */
 	async function handleFileUpload(file: File) {
+		console.log('STEP 0: Function started, clearing states');
 		uploadError = '';
 		uploadSuccess = '';
 		isUploading = true;
 
 		try {
-			console.log('STEP 1: Starting file upload process');
+			console.log('STEP 1: Starting file upload process, file:', file.name, 'type:', file.type);
 			
 			// Validate file type
+			console.log('STEP 1.1: About to validate file type');
 			if (!file.name.endsWith('.txt') && file.type !== 'text/plain') {
 				throw new Error('Please upload a text file (.txt)');
 			}
+			console.log('STEP 1.2: File type validation passed');
 
-			console.log('STEP 2: Reading file content');
+			console.log('STEP 2: About to read file content');
 			// Read file content
 			const content = await readFileContent(file);
 			console.log('STEP 2 COMPLETE: File content read, length:', content.length);
@@ -120,10 +129,19 @@
 	 * Read file content as text
 	 */
 	function readFileContent(file: File): Promise<string> {
+		console.log('READ FILE: Starting to read file');
 		return new Promise((resolve, reject) => {
+			console.log('READ FILE: Creating FileReader');
 			const reader = new FileReader();
-			reader.onload = () => resolve(reader.result as string);
-			reader.onerror = () => reject(new Error('Failed to read file'));
+			reader.onload = () => {
+				console.log('READ FILE: File read successfully');
+				resolve(reader.result as string);
+			};
+			reader.onerror = () => {
+				console.log('READ FILE: Error reading file');
+				reject(new Error('Failed to read file'));
+			};
+			console.log('READ FILE: Starting readAsText');
 			reader.readAsText(file, 'utf-8');
 		});
 	}
