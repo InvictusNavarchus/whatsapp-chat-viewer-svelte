@@ -22,18 +22,21 @@
 	const BUFFER_SIZE = 10;
 	const VISIBLE_ITEMS = 20;
 
-	// FIXED: Safe reactive statements with proper null checks
-	$: if ($currentChat && $messages.length > 0 && $appState.isInitialized) {
-		// Only update virtualization when we have both chat and messages
-		try {
-			updateVirtualizedMessages();
-		} catch (error) {
-			console.warn('Error updating virtualized messages:', error);
-		}
-	}
+	// TEMPORARILY DISABLED: These reactive statements cause freezing
+	// TODO: Re-implement these safely after fixing the root timing issue
+	// $: if ($currentChat && $messages.length > 0 && $appState.isInitialized) {
+	// 	updateVirtualizedMessages();
+	// }
 
-	// FIXED: Safe display messages with fallback
-	$: {
+	// TEMPORARILY DISABLED: Display messages assignment causing freeze
+	// $: {
+	// 	displayMessages = $appState.searchQuery ? $filteredMessages : virtualizedMessages;
+	// }
+
+	/**
+	 * Manual update of display messages (replaces reactive statement)
+	 */
+	function updateDisplayMessages() {
 		try {
 			displayMessages = $appState.searchQuery ? $filteredMessages : virtualizedMessages;
 		} catch (error) {
@@ -43,8 +46,18 @@
 	}
 
 	/**
-	 * Update virtualized messages based on scroll position
+	 * Manual update of virtualized messages (replaces reactive statement)
 	 */
+	function manualUpdateVirtualizedMessages() {
+		if ($currentChat && $messages.length > 0 && $appState.isInitialized) {
+			try {
+				updateVirtualizedMessages();
+				updateDisplayMessages();
+			} catch (error) {
+				console.warn('Error updating virtualized messages:', error);
+			}
+		}
+	}
 	function updateVirtualizedMessages() {
 		// FIXED: Add comprehensive safety checks
 		if (!$messages || !Array.isArray($messages) || $messages.length === 0) {
@@ -87,6 +100,7 @@
 		// Update virtualized messages when not searching
 		if (!$appState.searchQuery) {
 			updateVirtualizedMessages();
+			updateDisplayMessages();
 		}
 	}
 
@@ -105,6 +119,8 @@
 	function handleSearch(event: Event) {
 		const target = event.target as HTMLInputElement;
 		storeService.setSearchQuery(target.value);
+		// Manually update display messages when search changes
+		setTimeout(() => updateDisplayMessages(), 0);
 	}
 
 	/**
@@ -115,6 +131,8 @@
 		if (searchInput) {
 			searchInput.value = '';
 		}
+		// Manually update display messages when search is cleared
+		setTimeout(() => updateDisplayMessages(), 0);
 	}
 
 	/**
@@ -170,6 +188,9 @@
 	 * Auto-scroll to bottom when new messages are loaded
 	 */
 	onMount(() => {
+		// Manually update messages when component mounts
+		manualUpdateVirtualizedMessages();
+		
 		if (messagesContainer && isNearBottom) {
 			tick().then(() => {
 				scrollToBottom();
@@ -177,22 +198,18 @@
 		}
 	});
 
-	// FIXED: Safe auto-scroll with proper timing and null checks
-	$: if ($currentChat && messagesContainer && $appState.isInitialized && !$appState.isLoading) {
-		// Only auto-scroll when everything is ready and not loading
-		try {
-			tick().then(() => {
-				if (messagesContainer) { // Double-check DOM element still exists
-					scrollToBottom();
-					isNearBottom = true;
-				}
-			}).catch((error) => {
-				console.warn('Error during auto-scroll:', error);
-			});
-		} catch (error) {
-			console.warn('Error setting up auto-scroll:', error);
-		}
-	}
+	// TEMPORARILY DISABLED: Auto-scroll reactive statement causes freezing
+	// TODO: Re-implement this safely after fixing the root timing issue
+	// $: if ($currentChat && messagesContainer && $appState.isInitialized && !$appState.isLoading) {
+	// 	tick().then(() => {
+	// 		if (messagesContainer) {
+	// 			scrollToBottom();
+	// 			isNearBottom = true;
+	// 		}
+	// 	}).catch((error) => {
+	// 		console.warn('Error during auto-scroll:', error);
+	// 	});
+	// }
 </script>
 
 {#if $currentChat}
