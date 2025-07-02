@@ -231,9 +231,8 @@ class StoreService {
 			await dbService.storeChat(chatId, name, participants, parsedMessages, rawContent);
 			console.log('ADD CHAT: dbService.storeChat completed');
 			
-			// Add a small delay to ensure IndexedDB transaction is fully committed
-			console.log('ADD CHAT: Adding 100ms delay for IndexedDB commit');
-			await new Promise(resolve => setTimeout(resolve, 100));
+			// Remove the setTimeout delay that's causing the freeze
+			console.log('ADD CHAT: About to call loadChats immediately');
 			
 			// Refresh chats list
 			console.log('ADD CHAT: About to call loadChats');

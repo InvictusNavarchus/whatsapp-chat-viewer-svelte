@@ -134,29 +134,30 @@ class DatabaseService {
 
 			await tx.objectStore('chats').put(chat);
 
-			// Store messages in smaller batches to prevent overwhelming IndexedDB
+			// Store messages one by one to avoid Promise.all issues
 			const messageStore = tx.objectStore('messages');
-			const BATCH_SIZE = 100;
 			
-			for (let i = 0; i < messages.length; i += BATCH_SIZE) {
-				const batch = messages.slice(i, i + BATCH_SIZE);
-				const batchPromises = batch.map((message, batchIndex) => {
-					const messageIndex = i + batchIndex;
-					return messageStore.put({
-						id: `${id}-${messageIndex}`,
-						chatId: id,
-						timestamp: message.timestamp,
-						sender: message.sender,
-						content: message.content,
-						messageIndex: messageIndex
-					});
+			console.log('DB STORE: About to process', messages.length, 'messages sequentially');
+			
+			for (let i = 0; i < messages.length; i++) {
+				console.log('DB STORE: Processing message', i + 1, 'of', messages.length);
+				const message = messages[i];
+				await messageStore.put({
+					id: `${id}-${i}`,
+					chatId: id,
+					timestamp: message.timestamp,
+					sender: message.sender,
+					content: message.content,
+					messageIndex: i
 				});
-				
-				await Promise.all(batchPromises);
 			}
+			
+			console.log('DB STORE: All messages processed');
 
 			// Ensure transaction is fully committed
+			console.log('DB STORE: About to await tx.done');
 			await tx.done;
+			console.log('DB STORE: tx.done completed');
 			log.info('Chat stored successfully');
 		} catch (error) {
 			log.error('Error storing chat:', error);
