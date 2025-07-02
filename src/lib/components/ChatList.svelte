@@ -24,16 +24,31 @@
 	 */
 	async function selectChat(chat: Chat) {
 		console.log('CHATLIST: selectChat called for chat:', chat.id, chat.name);
+		console.log('CHATLIST: Step 1 - Function entry');
+		
+		// Add immediate debugging
+		console.log('CHATLIST: Step 2 - About to access storeService');
+		console.log('CHATLIST: storeService exists?', !!storeService);
+		console.log('CHATLIST: Step 3 - About to call switchToChat method');
 		
 		try {
+			console.log('CHATLIST: Step 4 - Inside try block');
 			console.log('CHATLIST: About to call storeService.switchToChat');
-			await storeService.switchToChat(chat.id);
+			console.log('CHATLIST: Step 5 - Calling switchToChat now...');
+			
+			// Call without await first to see if the freeze happens immediately
+			const promise = storeService.switchToChat(chat.id);
+			console.log('CHATLIST: Step 6 - switchToChat called, got promise:', !!promise);
+			
+			await promise;
 			console.log('CHATLIST: switchToChat completed successfully');
 		} catch (error) {
 			console.error('CHATLIST: Error in selectChat:', error);
 			console.error('CHATLIST: Error stack:', error instanceof Error ? error.stack : 'No stack available');
 			alert(`Failed to load chat "${chat.name}". Please try again. Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
 		}
+		
+		console.log('CHATLIST: Step 7 - Function end');
 	}
 
 	/**

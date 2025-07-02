@@ -68,8 +68,11 @@ export const appState = writable<AppState>({
 export const currentChat = derived(
 	[chats, appState],
 	([$chats, $appState]) => {
+		console.log('DERIVED STORE: currentChat called with chatId:', $appState.currentChatId);
 		if (!$appState.currentChatId) return null;
-		return $chats.find(chat => chat.id === $appState.currentChatId) || null;
+		const found = $chats.find(chat => chat.id === $appState.currentChatId) || null;
+		console.log('DERIVED STORE: currentChat returning:', found?.name || 'null');
+		return found;
 	}
 );
 
@@ -141,35 +144,42 @@ class StoreService {
 	 */
 	async loadMessages(chatId: string, forceRefresh = false): Promise<void> {
 		console.log('LOAD MESSAGES: Starting for chatId:', chatId, 'forceRefresh:', forceRefresh);
+		console.log('LOAD MESSAGES: Step 1 - Function entry');
 		
 		const operation = `loadMessages-${chatId}`;
 		
 		// Check circuit breaker
+		console.log('LOAD MESSAGES: Step 2 - Checking circuit breaker');
 		if (this.isCircuitBreakerOpen(operation)) {
 			console.error('LOAD MESSAGES: Circuit breaker is open, refusing to load messages');
 			throw new Error('Circuit breaker is open for loading messages. Please wait and try again.');
 		}
 		
+		console.log('LOAD MESSAGES: Step 3 - Checking loading states');
 		if (this.loadingStates.has(chatId)) {
 			console.warn(`LOAD MESSAGES: Already loading messages for chat ${chatId}, skipping duplicate request`);
 			return;
 		}
 		
 		// Check cache first
+		console.log('LOAD MESSAGES: Step 4 - Checking cache');
 		if (!forceRefresh && this.messageCache.has(chatId)) {
 			console.log('LOAD MESSAGES: Found cached messages, using cache');
 			const cachedMessages = this.messageCache.get(chatId)!;
+			console.log('LOAD MESSAGES: Step 5 - About to set cached messages in store');
 			messages.set(cachedMessages);
+			console.log('LOAD MESSAGES: Step 6 - Cached messages set, recording success');
 			this.recordSuccess(operation);
 			return;
 		}
 
 		try {
-			console.log('LOAD MESSAGES: Adding to loading states');
+			console.log('LOAD MESSAGES: Step 7 - Adding to loading states');
 			this.loadingStates.add(chatId);
+			console.log('LOAD MESSAGES: Step 8 - Updating app state to loading');
 			appState.update(state => ({ ...state, isLoading: true }));
 			
-			console.log('LOAD MESSAGES: About to call dbService.getAllMessagesForChat');
+			console.log('LOAD MESSAGES: Step 9 - About to call dbService.getAllMessagesForChat');
 			
 			// Add timeout to database call to prevent infinite hanging
 			const dbCallPromise = dbService.getAllMessagesForChat(chatId);
@@ -178,7 +188,7 @@ class StoreService {
 			});
 			
 			const messageList = await Promise.race([dbCallPromise, timeoutPromise]);
-			console.log('LOAD MESSAGES: Got messages from DB, count:', messageList.length);
+			console.log('LOAD MESSAGES: Step 10 - Got messages from DB, count:', messageList.length);
 			
 			// Validate the message list
 			if (!Array.isArray(messageList)) {
@@ -186,10 +196,11 @@ class StoreService {
 			}
 			
 			// Cache the results
+			console.log('LOAD MESSAGES: Step 11 - Caching messages');
 			this.messageCache.set(chatId, messageList);
-			console.log('LOAD MESSAGES: About to set messages in store');
+			console.log('LOAD MESSAGES: Step 12 - About to set messages in store');
 			messages.set(messageList);
-			console.log('LOAD MESSAGES: Set messages in store and cache');
+			console.log('LOAD MESSAGES: Step 13 - Set messages in store and cache');
 			
 			// Record success
 			this.recordSuccess(operation);
@@ -207,7 +218,7 @@ class StoreService {
 			messages.set([]);
 			throw error;
 		} finally {
-			console.log('LOAD MESSAGES: Cleaning up loading state');
+			console.log('LOAD MESSAGES: Step 14 - Cleaning up loading state');
 			this.loadingStates.delete(chatId);
 			appState.update(state => ({ ...state, isLoading: false }));
 		}
@@ -236,15 +247,20 @@ class StoreService {
 	 */
 	async switchToChat(chatId: string): Promise<void> {
 		console.log('SWITCH TO CHAT: Starting for chatId:', chatId);
+		console.log('SWITCH TO CHAT: Step 1 - Function entry');
 		
 		// Prevent switching to the same chat
+		console.log('SWITCH TO CHAT: Step 2 - Getting current state');
 		const currentState = get(appState);
+		console.log('SWITCH TO CHAT: Step 3 - Got current state:', currentState);
+		
 		if (currentState.currentChatId === chatId && !currentState.isLoading) {
 			console.log('SWITCH TO CHAT: Already viewing this chat, skipping');
 			return;
 		}
 		
 		// Prevent multiple simultaneous switches
+		console.log('SWITCH TO CHAT: Step 4 - Checking loading states');
 		const switchOperation = `switchToChat-${chatId}`;
 		if (this.loadingStates.has(switchOperation)) {
 			console.warn('SWITCH TO CHAT: Already switching to this chat, skipping duplicate request');
@@ -252,6 +268,7 @@ class StoreService {
 		}
 		
 		try {
+			console.log('SWITCH TO CHAT: Step 5 - Adding to loading states');
 			this.loadingStates.add(switchOperation);
 			
 			// Add timeout to prevent infinite hanging
@@ -259,17 +276,26 @@ class StoreService {
 				setTimeout(() => reject(new Error('switchToChat timeout after 10 seconds')), 10000);
 			});
 			
-			console.log('SWITCH TO CHAT: Updating appState...');
-			appState.update(state => ({ ...state, currentChatId: chatId }));
-			console.log('SWITCH TO CHAT: AppState updated, about to load messages');
+			console.log('SWITCH TO CHAT: Step 6 - About to load messages FIRST (before updating state)');
 			
-			// Race between loadMessages and timeout
+			// CRITICAL CHANGE: Load messages BEFORE updating the state to avoid reactive loops
 			await Promise.race([
 				this.loadMessages(chatId),
 				timeoutPromise
 			]);
 			
-			console.log('SWITCH TO CHAT: Messages loaded successfully');
+			console.log('SWITCH TO CHAT: Step 7 - Messages loaded, now updating appState...');
+			
+			// Only update the state after messages are loaded successfully
+			appState.update(state => {
+				console.log('SWITCH TO CHAT: Step 8 - Inside appState update function');
+				const newState = { ...state, currentChatId: chatId };
+				console.log('SWITCH TO CHAT: Step 9 - Created new state:', newState);
+				return newState;
+			});
+			
+			console.log('SWITCH TO CHAT: Step 10 - AppState updated successfully');
+			console.log('SWITCH TO CHAT: Messages loaded and state updated successfully');
 		} catch (error) {
 			console.error('SWITCH TO CHAT: Error occurred:', error);
 			// Reset state on error
