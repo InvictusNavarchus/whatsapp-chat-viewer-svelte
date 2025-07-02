@@ -11,6 +11,7 @@
 	let isNearBottom = true;
 	let showScrollButton = false;
 	let virtualizedMessages: Message[] = [];
+	let displayMessages: Message[] = []; // FIXED: Add missing variable declaration
 	let startIndex = 0;
 	let endIndex = 0;
 	let itemHeight = 80; // Approximate height of each message
