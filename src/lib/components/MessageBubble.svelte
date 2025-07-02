@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { storeService } from '$lib/stores';
-	import type { Message } from '$lib/stores';
+	import { storeService } from '$lib/stores.js';
+	import type { Message } from '$lib/stores.js';
 	import log from '$lib/logger';
 
 	export let message: Message;
@@ -9,9 +9,10 @@
 	let isBookmarked = false;
 	let isLoading = false;
 
-	// Check if message is bookmarked on mount
-	$: if (message) {
-		log.info('Checking bookmark status');
+	// Check if message is bookmarked only when message ID changes
+	let currentMessageId = '';
+	$: if (message.id !== currentMessageId) {
+		currentMessageId = message.id;
 		checkBookmarkStatus();
 	}
 
@@ -20,7 +21,6 @@
 	 */
 	async function checkBookmarkStatus() {
 		try {
-			log.info('Checking bookmark status');
 			isBookmarked = await storeService.isMessageBookmarked(message.id);
 		} catch (error) {
 			log.error('Failed to check bookmark status:', error);

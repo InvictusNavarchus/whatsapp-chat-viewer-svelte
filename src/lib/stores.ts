@@ -99,6 +99,7 @@ export const currentChatBookmarks = derived(
  */
 class StoreService {
 	private messageCache = new Map<string, Message[]>();
+	private bookmarkCache = new Map<string, boolean>();
 	private loadingStates = new Set<string>();
 
 	/**
@@ -169,6 +170,12 @@ class StoreService {
 		try {
 			const bookmarkList = await dbService.getAllBookmarks();
 			bookmarks.set(bookmarkList);
+			
+			// Update bookmark cache
+			this.bookmarkCache.clear();
+			for (const bookmark of bookmarkList) {
+				this.bookmarkCache.set(bookmark.messageId, true);
+			}
 		} catch (error) {
 			console.error('Failed to load bookmarks:', error);
 		}
@@ -222,8 +229,9 @@ class StoreService {
 			
 			await dbService.deleteChat(chatId);
 			
-			// Clear cache
+			// Clear caches
 			this.messageCache.delete(chatId);
+			this.bookmarkCache.clear(); // Clear all bookmark cache since bookmarks for this chat are deleted
 			
 			// If we're currently viewing this chat, clear current selection
 			const currentState = get(appState);
@@ -253,8 +261,10 @@ class StoreService {
 			
 			if (existingBookmark) {
 				await dbService.removeBookmark(existingBookmark.id);
+				this.bookmarkCache.set(messageId, false);
 			} else {
 				await dbService.addBookmark(messageId, chatId, note);
+				this.bookmarkCache.set(messageId, true);
 			}
 			
 			// Refresh bookmarks
@@ -270,7 +280,15 @@ class StoreService {
 	 * Check if a message is bookmarked
 	 */
 	async isMessageBookmarked(messageId: string): Promise<boolean> {
-		return await dbService.isMessageBookmarked(messageId);
+		// Check cache first
+		if (this.bookmarkCache.has(messageId)) {
+			return this.bookmarkCache.get(messageId)!;
+		}
+		
+		// Cache miss, check database
+		const isBookmarked = await dbService.isMessageBookmarked(messageId);
+		this.bookmarkCache.set(messageId, isBookmarked);
+		return isBookmarked;
 	}
 
 	/**

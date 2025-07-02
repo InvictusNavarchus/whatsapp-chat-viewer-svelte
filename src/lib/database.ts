@@ -51,6 +51,7 @@ interface ChatViewerDB extends DBSchema {
 		indexes: {
 			'by-chat': string;
 			'by-createdAt': Date;
+			'by-messageId': string;
 		};
 	};
 }
@@ -61,7 +62,7 @@ interface ChatViewerDB extends DBSchema {
 class DatabaseService {
 	private db: IDBPDatabase<ChatViewerDB> | null = null;
 	private readonly DB_NAME = 'whatsapp-chat-viewer';
-	private readonly DB_VERSION = 1;
+	private readonly DB_VERSION = 2;
 
 	/**
 	 * Initialize the database connection with optimized indexes
@@ -69,24 +70,32 @@ class DatabaseService {
 	async init(): Promise<void> {
 		log.info('Initializing database connection');
 		this.db = await openDB<ChatViewerDB>(this.DB_NAME, this.DB_VERSION, {
-			upgrade(db) {
-				// Chats store
-				const chatStore = db.createObjectStore('chats', { keyPath: 'id' });
-				chatStore.createIndex('by-name', 'name');
-				chatStore.createIndex('by-lastMessage', 'lastMessageAt');
-				chatStore.createIndex('by-createdAt', 'createdAt');
+			upgrade(db, oldVersion, newVersion, transaction) {
+				if (oldVersion < 1) {
+					// Chats store
+					const chatStore = db.createObjectStore('chats', { keyPath: 'id' });
+					chatStore.createIndex('by-name', 'name');
+					chatStore.createIndex('by-lastMessage', 'lastMessageAt');
+					chatStore.createIndex('by-createdAt', 'createdAt');
 
-				// Messages store with compound indexes for optimal querying
-				const messageStore = db.createObjectStore('messages', { keyPath: 'id' });
-				messageStore.createIndex('by-chat', 'chatId');
-				messageStore.createIndex('by-timestamp', 'timestamp');
-				messageStore.createIndex('by-sender', 'sender');
-				messageStore.createIndex('by-chat-index', ['chatId', 'messageIndex']);
+					// Messages store with compound indexes for optimal querying
+					const messageStore = db.createObjectStore('messages', { keyPath: 'id' });
+					messageStore.createIndex('by-chat', 'chatId');
+					messageStore.createIndex('by-timestamp', 'timestamp');
+					messageStore.createIndex('by-sender', 'sender');
+					messageStore.createIndex('by-chat-index', ['chatId', 'messageIndex']);
 
-				// Bookmarks store
-				const bookmarkStore = db.createObjectStore('bookmarks', { keyPath: 'id' });
-				bookmarkStore.createIndex('by-chat', 'chatId');
-				bookmarkStore.createIndex('by-createdAt', 'createdAt');
+					// Bookmarks store
+					const bookmarkStore = db.createObjectStore('bookmarks', { keyPath: 'id' });
+					bookmarkStore.createIndex('by-chat', 'chatId');
+					bookmarkStore.createIndex('by-createdAt', 'createdAt');
+				}
+				
+				if (oldVersion < 2) {
+					// Add messageId index to bookmarks for efficient lookups
+					const bookmarkStore = transaction.objectStore('bookmarks');
+					bookmarkStore.createIndex('by-messageId', 'messageId');
+				}
 			}
 		});
 		log.info('Database connection initialized');
@@ -170,16 +179,22 @@ class DatabaseService {
 		limit: number = 50, 
 		offset: number = 0
 	): Promise<ChatViewerDB['messages']['value'][]> {
-		log.info('Getting messages for a chat');
+		log.info('Getting messages for a chat with pagination');
 		if (!this.db) await this.init();
 		
-		let cursor = await this.db!.transaction('messages').store
-			.index('by-chat-index')
-			.openCursor(IDBKeyRange.bound([chatId, offset], [chatId, offset + limit - 1]));
+		const tx = this.db!.transaction('messages', 'readonly');
+		const index = tx.store.index('by-chat-index');
+		
+		// Use the compound index efficiently with proper range
+		const range = IDBKeyRange.bound([chatId, offset], [chatId, Infinity]);
+		let cursor = await index.openCursor(range);
 		
 		const messages: ChatViewerDB['messages']['value'][] = [];
-		while (cursor) {
+		let count = 0;
+		
+		while (cursor && count < limit) {
 			messages.push(cursor.value);
+			count++;
 			cursor = await cursor.continue();
 		}
 		
@@ -250,17 +265,9 @@ class DatabaseService {
 		log.info('Checking if a message is bookmarked');
 		if (!this.db) await this.init();
 		
-		const tx = this.db!.transaction('bookmarks', 'readonly');
-		let cursor = await tx.store.openCursor();
-		
-		while (cursor) {
-			if (cursor.value.messageId === messageId) {
-				return true;
-			}
-			cursor = await cursor.continue();
-		}
-		
-		return false;
+		// Use the efficient index-based lookup
+		const bookmark = await this.db!.getFromIndex('bookmarks', 'by-messageId', messageId);
+		return bookmark !== undefined;
 	}
 
 	/**
@@ -270,17 +277,8 @@ class DatabaseService {
 		log.info('Getting bookmark by message ID');
 		if (!this.db) await this.init();
 		
-		const tx = this.db!.transaction('bookmarks', 'readonly');
-		let cursor = await tx.store.openCursor();
-		
-		while (cursor) {
-			if (cursor.value.messageId === messageId) {
-				return cursor.value;
-			}
-			cursor = await cursor.continue();
-		}
-		
-		return undefined;
+		// Use the efficient index-based lookup
+		return await this.db!.getFromIndex('bookmarks', 'by-messageId', messageId);
 	}
 
 	/**
