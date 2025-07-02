@@ -36,13 +36,6 @@
 			<main class="chat-area" class:hidden={$appState.isMobile && !$appState.currentChatId}>
 				{#if $currentChat}
 					<ChatView />
-				{:else if $chats.length > 0}
-					<div class="welcome-screen">
-						<div class="welcome-content">
-							<h2>Select a chat to start viewing</h2>
-							<p>Choose a chat from the sidebar to see your messages</p>
-						</div>
-					</div>
 				{:else}
 					<div class="welcome-screen">
 						<UploadArea />
