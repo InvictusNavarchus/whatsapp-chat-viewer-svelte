@@ -168,20 +168,20 @@
 					<div class="participant-stats">
 						<h4>Message Distribution</h4>
 						<div class="participant-list">
-							{#each Object.entries(stats.participantStats).sort(([,a], [,b]) => (b as number) - (a as number)) as [participant, count]}
+							{#each Object.entries(stats.participantStats).sort(([,a], [,b]) => Number(b) - Number(a)) as [participant, count]}
 								<div class="participant-stat">
 									<div class="participant-info">
 										<span class="participant-name">{participant}</span>
-										<span class="participant-count">{formatNumber(count as number)} messages</span>
+										<span class="participant-count">{formatNumber(Number(count))} messages</span>
 									</div>
 									<div class="participant-bar">
 										<div 
 											class="participant-fill"
-											style="width: {formatPercentage(count as number, stats.messageCount)}"
+											style="width: {formatPercentage(Number(count), stats.messageCount)}"
 										></div>
 									</div>
 									<span class="participant-percentage">
-										{formatPercentage(count as number, stats.messageCount)}
+										{formatPercentage(Number(count), stats.messageCount)}
 									</span>
 								</div>
 							{/each}
