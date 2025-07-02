@@ -26,32 +26,31 @@
 	async function selectChat(chat: Chat) {
 		console.log('CHATLIST: selectChat called for chat:', chat.id, chat.name);
 		
-		// SIMPLE TEST: Just try to run a basic operation without storeService
 		try {
-			console.log('CHATLIST: Step 1 - Starting simple test');
+			console.log('CHATLIST: Test 1 - Basic appState update (known to work)');
+			appState.update(state => ({ ...state, currentChatId: chat.id }));
+			console.log('CHATLIST: Test 1 PASSED');
 			
-			// Test 1: Can we access appState directly?
-			console.log('CHATLIST: Step 2 - Testing appState access');
-			const currentAppState = get(appState);
-			console.log('CHATLIST: Step 3 - Current appState:', currentAppState);
+			console.log('CHATLIST: Test 2 - Trying storeService.loadMessages directly');
+			await storeService.loadMessages(chat.id);
+			console.log('CHATLIST: Test 2 PASSED - loadMessages works!');
 			
-			// Test 2: Can we update appState?
-			console.log('CHATLIST: Step 4 - Testing appState update');
-			appState.update(state => {
-				console.log('CHATLIST: Step 5 - Inside appState update');
-				return { ...state, currentChatId: chat.id };
-			});
-			console.log('CHATLIST: Step 6 - appState update completed');
+			console.log('CHATLIST: Test 3 - Trying full storeService.switchToChat');
+			// Reset state first
+			appState.update(state => ({ ...state, currentChatId: null }));
 			
-			// Test 3: Check the result
-			const newAppState = get(appState);
-			console.log('CHATLIST: Step 7 - New appState:', newAppState);
+			// Now try the full switchToChat method
+			await storeService.switchToChat(chat.id);
+			console.log('CHATLIST: Test 3 PASSED - switchToChat works too!');
 			
-			console.log('CHATLIST: ALL TESTS PASSED - The issue is NOT with basic store operations');
+			console.log('CHATLIST: ALL TESTS PASSED - The issue was likely with ChatView reactive statements');
 			
 		} catch (error) {
-			console.error('CHATLIST: Error in simple test:', error);
+			console.error('CHATLIST: Error in test:', error);
 			console.error('CHATLIST: Error stack:', error instanceof Error ? error.stack : 'No stack available');
+			
+			// Reset state on error
+			appState.update(state => ({ ...state, currentChatId: null }));
 		}
 	}
 
