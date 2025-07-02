@@ -23,7 +23,17 @@
 	 * Select a chat and load its messages
 	 */
 	async function selectChat(chat: Chat) {
-		await storeService.switchToChat(chat.id);
+		console.log('CHATLIST: selectChat called for chat:', chat.id, chat.name);
+		
+		try {
+			console.log('CHATLIST: About to call storeService.switchToChat');
+			await storeService.switchToChat(chat.id);
+			console.log('CHATLIST: switchToChat completed successfully');
+		} catch (error) {
+			console.error('CHATLIST: Error in selectChat:', error);
+			console.error('CHATLIST: Error stack:', error instanceof Error ? error.stack : 'No stack available');
+			alert(`Failed to load chat "${chat.name}". Please try again. Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+		}
 	}
 
 	/**

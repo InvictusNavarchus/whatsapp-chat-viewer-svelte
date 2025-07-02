@@ -68,36 +68,56 @@ class DatabaseService {
 	 * Initialize the database connection with optimized indexes
 	 */
 	async init(): Promise<void> {
+		console.log('DB: Starting database initialization');
 		log.info('Initializing database connection');
-		this.db = await openDB<ChatViewerDB>(this.DB_NAME, this.DB_VERSION, {
-			upgrade(db, oldVersion, newVersion, transaction) {
-				if (oldVersion < 1) {
-					// Chats store
-					const chatStore = db.createObjectStore('chats', { keyPath: 'id' });
-					chatStore.createIndex('by-name', 'name');
-					chatStore.createIndex('by-lastMessage', 'lastMessageAt');
-					chatStore.createIndex('by-createdAt', 'createdAt');
+		
+		try {
+			// Add timeout to database initialization
+			const dbPromise = openDB<ChatViewerDB>(this.DB_NAME, this.DB_VERSION, {
+				upgrade(db, oldVersion, newVersion, transaction) {
+					console.log('DB: Running database upgrade', { oldVersion, newVersion });
+					
+					if (oldVersion < 1) {
+						// Chats store
+						const chatStore = db.createObjectStore('chats', { keyPath: 'id' });
+						chatStore.createIndex('by-name', 'name');
+						chatStore.createIndex('by-lastMessage', 'lastMessageAt');
+						chatStore.createIndex('by-createdAt', 'createdAt');
 
-					// Messages store with compound indexes for optimal querying
-					const messageStore = db.createObjectStore('messages', { keyPath: 'id' });
-					messageStore.createIndex('by-chat', 'chatId');
-					messageStore.createIndex('by-timestamp', 'timestamp');
-					messageStore.createIndex('by-sender', 'sender');
-					messageStore.createIndex('by-chat-index', ['chatId', 'messageIndex']);
+						// Messages store with compound indexes for optimal querying
+						const messageStore = db.createObjectStore('messages', { keyPath: 'id' });
+						messageStore.createIndex('by-chat', 'chatId');
+						messageStore.createIndex('by-timestamp', 'timestamp');
+						messageStore.createIndex('by-sender', 'sender');
+						messageStore.createIndex('by-chat-index', ['chatId', 'messageIndex']);
 
-					// Bookmarks store
-					const bookmarkStore = db.createObjectStore('bookmarks', { keyPath: 'id' });
-					bookmarkStore.createIndex('by-chat', 'chatId');
-					bookmarkStore.createIndex('by-createdAt', 'createdAt');
+						// Bookmarks store
+						const bookmarkStore = db.createObjectStore('bookmarks', { keyPath: 'id' });
+						bookmarkStore.createIndex('by-chat', 'chatId');
+						bookmarkStore.createIndex('by-createdAt', 'createdAt');
+					}
+					
+					if (oldVersion < 2) {
+						// Add messageId index to bookmarks for efficient lookups
+						const bookmarkStore = transaction.objectStore('bookmarks');
+						bookmarkStore.createIndex('by-messageId', 'messageId');
+					}
 				}
-				
-				if (oldVersion < 2) {
-					// Add messageId index to bookmarks for efficient lookups
-					const bookmarkStore = transaction.objectStore('bookmarks');
-					bookmarkStore.createIndex('by-messageId', 'messageId');
-				}
-			}
-		});
+			});
+			
+			const timeoutPromise = new Promise<never>((_, reject) => {
+				setTimeout(() => reject(new Error('Database initialization timeout after 10 seconds')), 10000);
+			});
+			
+			this.db = await Promise.race([dbPromise, timeoutPromise]);
+			console.log('DB: Database initialization completed successfully');
+			
+		} catch (error) {
+			console.error('DB: Database initialization failed:', error);
+			console.error('DB: Error stack:', error instanceof Error ? error.stack : 'No stack available');
+			throw error;
+		}
+		
 		log.info('Database connection initialized');
 	}
 
@@ -227,9 +247,25 @@ class DatabaseService {
 	 * Get all messages for a chat (for searching/filtering)
 	 */
 	async getAllMessagesForChat(chatId: string): Promise<ChatViewerDB['messages']['value'][]> {
+		console.log('DB: getAllMessagesForChat called with chatId:', chatId);
 		log.info('Getting all messages for a chat');
-		if (!this.db) await this.init();
-		return await this.db!.getAllFromIndex('messages', 'by-chat', chatId);
+		
+		try {
+			if (!this.db) {
+				console.log('DB: Database not initialized, calling init()');
+				await this.init();
+			}
+			
+			console.log('DB: About to call getAllFromIndex');
+			const result = await this.db!.getAllFromIndex('messages', 'by-chat', chatId);
+			console.log('DB: getAllFromIndex completed, result count:', result.length);
+			
+			return result;
+		} catch (error) {
+			console.error('DB: Error in getAllMessagesForChat:', error);
+			console.error('DB: Error stack:', error instanceof Error ? error.stack : 'No stack available');
+			throw error;
+		}
 	}
 
 	/**

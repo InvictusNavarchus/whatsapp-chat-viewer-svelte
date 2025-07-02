@@ -101,6 +101,10 @@ class StoreService {
 	private messageCache = new Map<string, Message[]>();
 	private bookmarkCache = new Map<string, boolean>();
 	private loadingStates = new Set<string>();
+	private circuitBreaker = new Map<string, { failures: number; lastFailure: number }>();
+
+	private readonly MAX_FAILURES = 3;
+	private readonly CIRCUIT_BREAKER_TIMEOUT = 30000; // 30 seconds
 
 	/**
 	 * Initialize the store service and load initial data
@@ -138,6 +142,14 @@ class StoreService {
 	async loadMessages(chatId: string, forceRefresh = false): Promise<void> {
 		console.log('LOAD MESSAGES: Starting for chatId:', chatId, 'forceRefresh:', forceRefresh);
 		
+		const operation = `loadMessages-${chatId}`;
+		
+		// Check circuit breaker
+		if (this.isCircuitBreakerOpen(operation)) {
+			console.error('LOAD MESSAGES: Circuit breaker is open, refusing to load messages');
+			throw new Error('Circuit breaker is open for loading messages. Please wait and try again.');
+		}
+		
 		if (this.loadingStates.has(chatId)) {
 			console.warn(`LOAD MESSAGES: Already loading messages for chat ${chatId}, skipping duplicate request`);
 			return;
@@ -148,6 +160,7 @@ class StoreService {
 			console.log('LOAD MESSAGES: Found cached messages, using cache');
 			const cachedMessages = this.messageCache.get(chatId)!;
 			messages.set(cachedMessages);
+			this.recordSuccess(operation);
 			return;
 		}
 
@@ -157,18 +170,42 @@ class StoreService {
 			appState.update(state => ({ ...state, isLoading: true }));
 			
 			console.log('LOAD MESSAGES: About to call dbService.getAllMessagesForChat');
-			const messageList = await dbService.getAllMessagesForChat(chatId);
+			
+			// Add timeout to database call to prevent infinite hanging
+			const dbCallPromise = dbService.getAllMessagesForChat(chatId);
+			const timeoutPromise = new Promise<never>((_, reject) => {
+				setTimeout(() => reject(new Error('Database call timeout after 8 seconds')), 8000);
+			});
+			
+			const messageList = await Promise.race([dbCallPromise, timeoutPromise]);
 			console.log('LOAD MESSAGES: Got messages from DB, count:', messageList.length);
+			
+			// Validate the message list
+			if (!Array.isArray(messageList)) {
+				throw new Error('Invalid message list received from database');
+			}
 			
 			// Cache the results
 			this.messageCache.set(chatId, messageList);
+			console.log('LOAD MESSAGES: About to set messages in store');
 			messages.set(messageList);
 			console.log('LOAD MESSAGES: Set messages in store and cache');
 			
+			// Record success
+			this.recordSuccess(operation);
+			
 		} catch (error) {
 			console.error('LOAD MESSAGES: Failed to load messages:', error);
+			console.error('LOAD MESSAGES: Error stack:', error instanceof Error ? error.stack : 'No stack available');
+			
+			// Record failure for circuit breaker
+			this.recordFailure(operation);
+			
 			// Clear the cache entry on error
 			this.messageCache.delete(chatId);
+			// Set empty messages on error
+			messages.set([]);
+			throw error;
 		} finally {
 			console.log('LOAD MESSAGES: Cleaning up loading state');
 			this.loadingStates.delete(chatId);
@@ -199,10 +236,48 @@ class StoreService {
 	 */
 	async switchToChat(chatId: string): Promise<void> {
 		console.log('SWITCH TO CHAT: Starting for chatId:', chatId);
-		appState.update(state => ({ ...state, currentChatId: chatId }));
-		console.log('SWITCH TO CHAT: Updated appState, about to load messages');
-		await this.loadMessages(chatId);
-		console.log('SWITCH TO CHAT: Messages loaded successfully');
+		
+		// Prevent switching to the same chat
+		const currentState = get(appState);
+		if (currentState.currentChatId === chatId && !currentState.isLoading) {
+			console.log('SWITCH TO CHAT: Already viewing this chat, skipping');
+			return;
+		}
+		
+		// Prevent multiple simultaneous switches
+		const switchOperation = `switchToChat-${chatId}`;
+		if (this.loadingStates.has(switchOperation)) {
+			console.warn('SWITCH TO CHAT: Already switching to this chat, skipping duplicate request');
+			return;
+		}
+		
+		try {
+			this.loadingStates.add(switchOperation);
+			
+			// Add timeout to prevent infinite hanging
+			const timeoutPromise = new Promise((_, reject) => {
+				setTimeout(() => reject(new Error('switchToChat timeout after 10 seconds')), 10000);
+			});
+			
+			console.log('SWITCH TO CHAT: Updating appState...');
+			appState.update(state => ({ ...state, currentChatId: chatId }));
+			console.log('SWITCH TO CHAT: AppState updated, about to load messages');
+			
+			// Race between loadMessages and timeout
+			await Promise.race([
+				this.loadMessages(chatId),
+				timeoutPromise
+			]);
+			
+			console.log('SWITCH TO CHAT: Messages loaded successfully');
+		} catch (error) {
+			console.error('SWITCH TO CHAT: Error occurred:', error);
+			// Reset state on error
+			appState.update(state => ({ ...state, currentChatId: null, isLoading: false }));
+			throw error;
+		} finally {
+			this.loadingStates.delete(switchOperation);
+		}
 	}
 
 	/**
@@ -424,6 +499,88 @@ class StoreService {
 			participantStats,
 			dateRange: { start: startDate, end: endDate },
 			averageMessagesPerDay
+		};
+	}
+
+	/**
+	 * Check if circuit breaker is open for a given operation
+	 */
+	private isCircuitBreakerOpen(operation: string): boolean {
+		const breaker = this.circuitBreaker.get(operation);
+		if (!breaker) return false;
+		
+		if (breaker.failures >= this.MAX_FAILURES) {
+			const timeSinceLastFailure = Date.now() - breaker.lastFailure;
+			if (timeSinceLastFailure < this.CIRCUIT_BREAKER_TIMEOUT) {
+				console.warn(`CIRCUIT BREAKER: Operation ${operation} is circuit broken. Failures: ${breaker.failures}`);
+				return true;
+			} else {
+				// Reset circuit breaker after timeout
+				this.circuitBreaker.delete(operation);
+				return false;
+			}
+		}
+		
+		return false;
+	}
+
+	/**
+	 * Record a failure for circuit breaker
+	 */
+	private recordFailure(operation: string): void {
+		const breaker = this.circuitBreaker.get(operation) || { failures: 0, lastFailure: 0 };
+		breaker.failures++;
+		breaker.lastFailure = Date.now();
+		this.circuitBreaker.set(operation, breaker);
+		console.warn(`CIRCUIT BREAKER: Recorded failure for ${operation}. Total failures: ${breaker.failures}`);
+	}
+
+	/**
+	 * Record a success for circuit breaker (reset failure count)
+	 */
+	private recordSuccess(operation: string): void {
+		this.circuitBreaker.delete(operation);
+	}
+
+	/**
+	 * Emergency reset method to recover from frozen states
+	 */
+	emergencyReset(): void {
+		console.log('EMERGENCY RESET: Resetting all state and caches');
+		
+		// Clear all caches
+		this.messageCache.clear();
+		this.bookmarkCache.clear();
+		this.loadingStates.clear();
+		this.circuitBreaker.clear();
+		
+		// Reset all stores to initial state
+		appState.set({
+			currentChatId: null,
+			isLoading: false,
+			searchQuery: '',
+			showBookmarks: false,
+			isMobile: window.innerWidth < 768,
+			isInitialized: true
+		});
+		
+		messages.set([]);
+		
+		console.log('EMERGENCY RESET: Reset completed');
+	}
+
+	/**
+	 * Get current state for debugging
+	 */
+	getDebugInfo(): object {
+		return {
+			messageCache: Array.from(this.messageCache.keys()),
+			loadingStates: Array.from(this.loadingStates),
+			circuitBreaker: Array.from(this.circuitBreaker.entries()),
+			appState: get(appState),
+			chatCount: get(chats).length,
+			messageCount: get(messages).length,
+			bookmarkCount: get(bookmarks).length
 		};
 	}
 }
