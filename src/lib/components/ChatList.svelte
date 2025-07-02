@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { chats, appState, storeService } from '$lib/stores';
+	import { get } from 'svelte/store';
 	import type { Chat } from '$lib/stores';
 	import log from '$lib/logger';
 
@@ -24,31 +25,34 @@
 	 */
 	async function selectChat(chat: Chat) {
 		console.log('CHATLIST: selectChat called for chat:', chat.id, chat.name);
-		console.log('CHATLIST: Step 1 - Function entry');
 		
-		// Add immediate debugging
-		console.log('CHATLIST: Step 2 - About to access storeService');
-		console.log('CHATLIST: storeService exists?', !!storeService);
-		console.log('CHATLIST: Step 3 - About to call switchToChat method');
-		
+		// SIMPLE TEST: Just try to run a basic operation without storeService
 		try {
-			console.log('CHATLIST: Step 4 - Inside try block');
-			console.log('CHATLIST: About to call storeService.switchToChat');
-			console.log('CHATLIST: Step 5 - Calling switchToChat now...');
+			console.log('CHATLIST: Step 1 - Starting simple test');
 			
-			// Call without await first to see if the freeze happens immediately
-			const promise = storeService.switchToChat(chat.id);
-			console.log('CHATLIST: Step 6 - switchToChat called, got promise:', !!promise);
+			// Test 1: Can we access appState directly?
+			console.log('CHATLIST: Step 2 - Testing appState access');
+			const currentAppState = get(appState);
+			console.log('CHATLIST: Step 3 - Current appState:', currentAppState);
 			
-			await promise;
-			console.log('CHATLIST: switchToChat completed successfully');
+			// Test 2: Can we update appState?
+			console.log('CHATLIST: Step 4 - Testing appState update');
+			appState.update(state => {
+				console.log('CHATLIST: Step 5 - Inside appState update');
+				return { ...state, currentChatId: chat.id };
+			});
+			console.log('CHATLIST: Step 6 - appState update completed');
+			
+			// Test 3: Check the result
+			const newAppState = get(appState);
+			console.log('CHATLIST: Step 7 - New appState:', newAppState);
+			
+			console.log('CHATLIST: ALL TESTS PASSED - The issue is NOT with basic store operations');
+			
 		} catch (error) {
-			console.error('CHATLIST: Error in selectChat:', error);
+			console.error('CHATLIST: Error in simple test:', error);
 			console.error('CHATLIST: Error stack:', error instanceof Error ? error.stack : 'No stack available');
-			alert(`Failed to load chat "${chat.name}". Please try again. Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
 		}
-		
-		console.log('CHATLIST: Step 7 - Function end');
 	}
 
 	/**

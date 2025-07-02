@@ -21,11 +21,12 @@
 	const BUFFER_SIZE = 10;
 	const VISIBLE_ITEMS = 20;
 
-	$: if ($currentChat && $messages.length > 0) {
-		updateVirtualizedMessages();
-	}
+	// TEMPORARILY DISABLED REACTIVE STATEMENTS FOR DEBUGGING
+	// $: if ($currentChat && $messages.length > 0) {
+	// 	updateVirtualizedMessages();
+	// }
 
-	$: displayMessages = $appState.searchQuery ? $filteredMessages : virtualizedMessages;
+	// $: displayMessages = $appState.searchQuery ? $filteredMessages : virtualizedMessages;
 
 	/**
 	 * Update virtualized messages based on scroll position
@@ -153,13 +154,13 @@
 		}
 	});
 
-	// Auto-scroll to bottom when chat changes
-	$: if ($currentChat && messagesContainer) {
-		tick().then(() => {
-			scrollToBottom();
-			isNearBottom = true;
-		});
-	}
+	// TEMPORARILY DISABLED: Auto-scroll to bottom when chat changes
+	// $: if ($currentChat && messagesContainer) {
+	// 	tick().then(() => {
+	// 		scrollToBottom();
+	// 		isNearBottom = true;
+	// 	});
+	// }
 </script>
 
 {#if $currentChat}
