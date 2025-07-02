@@ -45,10 +45,9 @@
 	 */
 	function handleFileInput(event: Event) {
 		console.log('FILE INPUT: Event triggered');
-		console.log('FILE INPUT: Event object:', event);
 		
 		const target = event.target as HTMLInputElement;
-		console.log('FILE INPUT: Target acquired:', target);
+		console.log('FILE INPUT: Target acquired');
 		
 		console.log('FILE INPUT: About to access target.files');
 		const files = target.files;
