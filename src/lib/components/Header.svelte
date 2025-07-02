@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { appState, storeService } from '$lib/stores.js';
+	import { appState, storeService } from '$lib/stores';
 	import log from '$lib/logger';
 
 	/**

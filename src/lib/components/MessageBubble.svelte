@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { storeService } from '$lib/stores.js';
-	import type { Message } from '$lib/stores.js';
+	import { storeService } from '$lib/stores';
+	import type { Message } from '$lib/stores';
 	import log from '$lib/logger';
 
 	export let message: Message;

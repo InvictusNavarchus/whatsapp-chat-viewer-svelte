@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { storeService } from '$lib/stores.js';
-	import type { Chat } from '$lib/stores.js';
+	import { storeService } from '$lib/stores';
+	import type { Chat } from '$lib/stores';
 	import log from '$lib/logger';
 
 	export let chat: Chat;

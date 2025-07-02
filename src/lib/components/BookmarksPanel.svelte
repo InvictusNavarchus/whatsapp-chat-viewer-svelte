@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { bookmarks, currentChatBookmarks, chats, appState, storeService } from '$lib/stores.js';
-	import type { Bookmark, Chat } from '$lib/stores.js';
+	import { bookmarks, currentChatBookmarks, chats, appState, storeService } from '$lib/stores';
+	import type { Bookmark, Chat } from '$lib/stores';
 	import log from '$lib/logger';
 
 	let viewMode: 'all' | 'current' = 'all';

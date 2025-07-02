@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { appState, chats, currentChat } from '$lib/stores.js';
+	import { appState, chats, currentChat } from '$lib/stores';
 	import ChatList from '$lib/components/ChatList.svelte';
 	import ChatView from '$lib/components/ChatView.svelte';
 	import UploadArea from '$lib/components/UploadArea.svelte';

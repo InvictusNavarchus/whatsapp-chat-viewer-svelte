@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount, tick } from 'svelte';
-	import { messages, filteredMessages, currentChat, appState, storeService } from '$lib/stores.js';
-	import type { Message } from '$lib/stores.js';
+	import { messages, filteredMessages, currentChat, appState, storeService } from '$lib/stores';
+	import type { Message } from '$lib/stores';
 	import MessageBubble from './MessageBubble.svelte';
 	import ChatHeader from './ChatHeader.svelte';
 	import log from '$lib/logger';
