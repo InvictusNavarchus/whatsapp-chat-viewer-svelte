@@ -182,6 +182,12 @@ class StoreService {
 			const messageList = await Promise.race([dbCallPromise, timeoutPromise]);
 			console.log('LOAD MESSAGES: Got messages from DB, count:', messageList.length);
 			
+			// DEBUG: Log message ordering to diagnose the issue
+			if (messageList.length > 0) {
+				console.log('LOAD MESSAGES: First 5 messages order check:', messageList.slice(0, 5).map(m => `${m.messageIndex}: ${m.timestamp.toISOString()} - ${m.content.substring(0, 30)}`));
+				console.log('LOAD MESSAGES: Last 5 messages order check:', messageList.slice(-5).map(m => `${m.messageIndex}: ${m.timestamp.toISOString()} - ${m.content.substring(0, 30)}`));
+			}
+			
 			// Validate the message list
 			if (!Array.isArray(messageList)) {
 				throw new Error('Invalid message list received from database');

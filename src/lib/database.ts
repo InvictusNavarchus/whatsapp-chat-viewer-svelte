@@ -244,11 +244,11 @@ class DatabaseService {
 	}
 
 	/**
-	 * Get all messages for a chat (for searching/filtering)
+	 * Get all messages for a chat (for searching/filtering) - FIXED: Now uses proper ordering
 	 */
 	async getAllMessagesForChat(chatId: string): Promise<ChatViewerDB['messages']['value'][]> {
 		console.log('DB: getAllMessagesForChat called with chatId:', chatId);
-		log.info('Getting all messages for a chat');
+		log.info('Getting all messages for a chat with proper ordering');
 		
 		try {
 			if (!this.db) {
@@ -256,11 +256,34 @@ class DatabaseService {
 				await this.init();
 			}
 			
-			console.log('DB: About to call getAllFromIndex');
-			const result = await this.db!.getAllFromIndex('messages', 'by-chat', chatId);
-			console.log('DB: getAllFromIndex completed, result count:', result.length);
+			console.log('DB: About to use by-chat-index for proper ordering');
+			const tx = this.db!.transaction('messages', 'readonly');
+			const index = tx.store.index('by-chat-index');
 			
-			return result;
+			// Use the compound index for proper ordering by messageIndex
+			const range = IDBKeyRange.bound([chatId, 0], [chatId, Infinity]);
+			let cursor = await index.openCursor(range);
+			
+			const messages: ChatViewerDB['messages']['value'][] = [];
+			let iterations = 0;
+			const MAX_ITERATIONS = 50000; // Safety limit to prevent infinite loops
+			
+			console.log('DB: Starting cursor iteration for ordered messages');
+			while (cursor && iterations < MAX_ITERATIONS) {
+				messages.push(cursor.value);
+				iterations++;
+				cursor = await cursor.continue();
+			}
+			
+			if (iterations >= MAX_ITERATIONS) {
+				console.error('getAllMessagesForChat: Hit iteration limit, possible infinite loop detected');
+			}
+			
+			console.log('DB: getAllMessagesForChat completed with proper ordering, result count:', messages.length);
+			console.log('DB: First few message indices:', messages.slice(0, 5).map(m => `${m.messageIndex}: ${m.content.substring(0, 50)}`));
+			console.log('DB: Last few message indices:', messages.slice(-5).map(m => `${m.messageIndex}: ${m.content.substring(0, 50)}`));
+			
+			return messages;
 		} catch (error) {
 			console.error('DB: Error in getAllMessagesForChat:', error);
 			console.error('DB: Error stack:', error instanceof Error ? error.stack : 'No stack available');

@@ -66,6 +66,13 @@
 		}
 
 		try {
+			// DEBUG: Log message ordering to diagnose the issue
+			console.log('CHATVIEW: updateVirtualizedMessages called with', $messages.length, 'messages');
+			if ($messages.length > 0) {
+				console.log('CHATVIEW: First 5 messages order check:', $messages.slice(0, 5).map(m => `${m.messageIndex}: ${m.timestamp.toISOString()} - ${m.content.substring(0, 30)}`));
+				console.log('CHATVIEW: Last 5 messages order check:', $messages.slice(-5).map(m => `${m.messageIndex}: ${m.timestamp.toISOString()} - ${m.content.substring(0, 30)}`));
+			}
+
 			const visibleStart = Math.floor(scrollTop / itemHeight);
 			const visibleEnd = Math.min(
 				visibleStart + Math.ceil(containerHeight / itemHeight),
@@ -76,6 +83,7 @@
 			endIndex = Math.min($messages.length, visibleEnd + BUFFER_SIZE);
 
 			virtualizedMessages = $messages.slice(startIndex, endIndex);
+			console.log('CHATVIEW: Virtualized messages range:', startIndex, 'to', endIndex, 'count:', virtualizedMessages.length);
 		} catch (error) {
 			console.warn('Error in updateVirtualizedMessages:', error);
 			virtualizedMessages = $messages.slice(0, Math.min(50, $messages.length)); // Safe fallback
