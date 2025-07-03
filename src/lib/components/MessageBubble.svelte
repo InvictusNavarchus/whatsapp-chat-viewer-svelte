@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { storeService } from '$lib/stores.js';
+	import { storeService, currentChat } from '$lib/stores.js';
 	import type { Message } from '$lib/stores.js';
 	import log from '$lib/logger';
 
@@ -57,12 +57,21 @@
 	}
 
 	/**
-	 * Determine if this is a sent message (from the first participant)
+	 * Determine if this is a sent message (from the current user)
+	 * In WhatsApp exports, the first participant is typically the current user
 	 */
 	function isSentMessage(sender: string): boolean {
-		// This is a simplified logic - in a real app you'd want to identify the current user
-		// For now, we'll consider the first participant as "sent" messages
-		return sender !== 'System';
+		if (sender === 'System') return false;
+		
+		// Get the current chat to access participants list
+		const chat = $currentChat;
+		if (!chat || !chat.participants || chat.participants.length === 0) {
+			return false;
+		}
+		
+		// The first participant in the list is typically the current user
+		const currentUser = chat.participants[0];
+		return sender === currentUser;
 	}
 
 	/**
